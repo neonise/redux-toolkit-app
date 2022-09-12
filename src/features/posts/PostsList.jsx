@@ -1,20 +1,38 @@
-import React from "react";
-import { useSelector } from "react-redux";
-import { selectAllPosts } from "./postsSlice";
+import React, { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import PostExcerpt from "./PostExcerpt";
+import {
+  fetchPosts,
+  getPostsStatus,
+  selectAllPosts,
+  getPostsError,
+} from "./postsSlice";
 
 const PostsList = () => {
+  const dispatch = useDispatch();
   const posts = useSelector(selectAllPosts);
-  const renderPosts = posts.map((post) => (
-    <article key={post.id}>
-      <h3>{post.title}</h3>
-      <p>{post.content.substring(0, 100)}</p>
-    </article>
-  ));
+  const postsStatus = useSelector(getPostsStatus);
+  const postsError = useSelector(getPostsError);
+
+  useEffect(() => {
+    if (postsStatus === "idle") dispatch(fetchPosts());
+  }, [postsStatus, dispatch]);
+
+  let content;
+  if (postsStatus == "loading") {
+    content = <p>Loading...</p>;
+  } else if (postsStatus === "succeeded") {
+    content = posts.map((post, index) => (
+      <PostExcerpt key={index} post={post} />
+    ));
+  } else if (postsStatus === "failed") {
+    content = <p>{postsError}</p>;
+  }
 
   return (
     <section>
       <h2>Posts</h2>
-      {renderPosts}
+      {content}
     </section>
   );
 };

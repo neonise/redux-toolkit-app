@@ -1,19 +1,22 @@
-import { createSlice, nanoid } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, nanoid } from "@reduxjs/toolkit";
+import axios from "axios";
 
-const initialState = [
-  {
-    id: "1",
-    title: "سلام صبح بخیر",
-    content:
-      "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy",
-  },
-  {
-    id: "2",
-    title: "خداحافظظظظظظ",
-    content:
-      "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. ",
-  },
-];
+const POSTS_URL = "https://jsonplaceholder.typicode.com/posts";
+
+const initialState = {
+  posts: [],
+  status: "idle",
+  error: null,
+};
+
+export const fetchPosts = createAsyncThunk("posts/fetchPosts", async () => {
+  try {
+    const response = await axios.get(POSTS_URL);
+    return [...response.data];
+  } catch (error) {
+    return error.message;
+  }
+});
 
 const postsSlice = createSlice({
   name: "posts",
@@ -21,7 +24,7 @@ const postsSlice = createSlice({
   reducers: {
     postAdded: {
       reducer: (state, action) => {
-        state.push(action.payload);
+        state.posts.push(action.payload);
       },
       prepare(title, content) {
         return {
@@ -34,8 +37,32 @@ const postsSlice = createSlice({
       },
     },
   },
+  extraReducers(builder) {
+    builder
+      .addCase(fetchPosts.pending, (state, action) => {
+        state.status = "loading";
+      })
+      .addCase(fetchPosts.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        // Adding date and reactions
+        let min = 1;
+        const loadedPosts = action.payload.map((post) => {
+          return post;
+        });
+
+        // Add any fetched posts to the array
+        state.posts = state.posts.concat(loadedPosts);
+      })
+      .addCase(fetchPosts.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message;
+      });
+  },
 });
 
-export const selectAllPosts = (state) => state.posts;
+export const selectAllPosts = (state) => state.posts.posts;
+export const getPostsStatus = (state) => state.posts.status;
+export const getPostsError = (state) => state.posts.error;
+
 export const { postAdded } = postsSlice.actions;
 export default postsSlice.reducer;
